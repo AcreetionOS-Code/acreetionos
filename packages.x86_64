@@ -69,6 +69,7 @@ dhcpcd
 dhclient
 iw
 iwd
+wpa_supplicant
 wireless-regdb
 wireless_tools
 openssh
