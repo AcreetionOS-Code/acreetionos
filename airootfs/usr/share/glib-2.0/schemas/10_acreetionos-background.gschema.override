@@ -1,0 +1,8 @@
+[org.gnome.desktop.background]
+picture-uri='file:///usr/share/backgrounds/neb-3.jpeg'
+picture-uri-dark='file:///usr/share/backgrounds/neb-3.jpeg'
+picture-options='zoom'
+
+[org.cinnamon.desktop.background]
+picture-uri='file:///usr/share/backgrounds/neb-3.jpeg'
+picture-options='zoom'

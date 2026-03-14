@@ -362,3 +362,5 @@ pv
 nbd
 #nfs-utils
 open-iscsi
+# auto login toggle program for acreetionos
+autologger
