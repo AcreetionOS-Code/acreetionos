@@ -36,7 +36,7 @@ Our current goal is to release a stable distribution by the end of 2026. Check o
 
 - **Project Status:** In active development
 - **License:** GPL-3.0
-- **Maintainers:** Darren Clift (@cobra3282000), Johnathan Spiva (@sprunglesongithub) or (@Sprungles)
+- **Maintainers:** Darren Clift (@cobra3282000), Natalie Cole-Clift Spiva (@spivanatalie64) or (@Sprungles)
 
 
 ## Contact
