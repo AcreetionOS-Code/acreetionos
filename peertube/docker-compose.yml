@@ -1,0 +1,45 @@
+services:
+  webserver:
+    image: chocobozzz/peertube-webserver:latest
+    env_file:
+      - .env
+    ports:
+      - "7779:80"
+    volumes:
+      - ./docker-volume/nginx/peertube.template:/etc/nginx/conf.d/peertube.template:ro
+      - assets:/var/www/peertube/peertube-latest/client/dist:ro
+      - ./docker-volume/data:/var/www/peertube/storage
+      - ./docker-volume/nginx-logs:/var/log/nginx
+    depends_on:
+      - peertube
+    restart: "always"
+
+  peertube:
+    image: chocobozzz/peertube:production-bookworm
+    env_file:
+      - .env
+    ports:
+      - "1935:1935" # RTMP
+    volumes:
+      - assets:/app/client/dist
+      - ./docker-volume/data:/var/www/peertube/storage
+      - ./docker-volume/config:/config
+    depends_on:
+      - postgres
+      - redis
+    restart: "always"
+
+  postgres:
+    image: postgres:13-alpine
+    env_file:
+      - .env
+    volumes:
+      - ./docker-volume/db:/var/lib/postgresql/data
+    restart: "always"
+
+  redis:
+    image: redis:7-alpine
+    restart: "always"
+
+volumes:
+  assets:
