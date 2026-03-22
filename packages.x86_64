@@ -1,7 +1,13 @@
 ################################################################################
-# AcreetionOS Package List v2.0
+# AcreetionOS Package List
 # Optimized for minimal ISO size while maintaining full functionality
 ################################################################################
+
+################################################################################
+# AcreetionOS Specific Packages
+################################################################################
+acreetionosinstall
+
 
 ################################################################################
 # CORE SYSTEM - Essential base system packages
@@ -69,7 +75,6 @@ dhcpcd
 dhclient
 iw
 iwd
-wpa_supplicant
 wireless-regdb
 wireless_tools
 openssh
@@ -156,9 +161,10 @@ kcrash
 ################################################################################
 # CALAMARES INSTALLER - System installer and dependencies
 ################################################################################
-calamares
-calamares-config
+
+ages_installer
 kpmcore
+xxkpmcore
 yaml-cpp
 libpwquality
 
@@ -233,9 +239,9 @@ mtools
 ################################################################################
 # COMMENTED OUT - Previously included, kept for reference
 ################################################################################
-# Hardware microcode
+# Hardware microcode (uncomment if needed for specific hardware)
 #amd-ucode
-intel-ucode
+#intel-ucode
 
 # Additional filesystems (uncomment if needed)
 #btrfs-progs
@@ -362,5 +368,3 @@ pv
 nbd
 #nfs-utils
 open-iscsi
-# auto login toggle program for acreetionos
-autologger
