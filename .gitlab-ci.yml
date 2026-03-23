@@ -41,7 +41,7 @@ workflow:
 prepare:deps:
   stage: prepare
   tags:
-    - acreetionos-builder
+    - acreetionos
   script:
     - echo "==> Initialising pacman keyring..."
     - pacman-key --init
