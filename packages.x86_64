@@ -1,14 +1,8 @@
 ################################################################################
-# AcreetionOS Package List
+# AcreetionOS Package List v2.0
 # Optimized for minimal ISO size while maintaining full functionality
 ################################################################################
-
-################################################################################
-# AcreetionOS Specific Packages
-################################################################################
-#acreetionosinstall
-
-
+#  update line  
 ################################################################################
 # CORE SYSTEM - Essential base system packages
 ################################################################################
@@ -75,6 +69,7 @@ dhcpcd
 dhclient
 iw
 iwd
+wpa_supplicant
 wireless-regdb
 wireless_tools
 openssh
@@ -92,7 +87,8 @@ sof-firmware
 ################################################################################
 # DISPLAY SERVER & GRAPHICS
 ################################################################################
-xorg
+xorg-server
+xorg-server-common
 mesa
 mesa-utils
 glu
@@ -163,9 +159,7 @@ kcrash
 ################################################################################
 calamares
 calamares-config
-#ages_installer
 kpmcore
-xxkpmcore
 yaml-cpp
 libpwquality
 
@@ -240,9 +234,9 @@ mtools
 ################################################################################
 # COMMENTED OUT - Previously included, kept for reference
 ################################################################################
-# Hardware microcode (uncomment if needed for specific hardware)
+# Hardware microcode
 #amd-ucode
-#intel-ucode
+intel-ucode
 
 # Additional filesystems (uncomment if needed)
 #btrfs-progs
@@ -369,3 +363,5 @@ pv
 nbd
 #nfs-utils
 open-iscsi
+# auto logger
+autologger
