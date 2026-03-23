@@ -162,7 +162,7 @@ kcrash
 # CALAMARES INSTALLER - System installer and dependencies
 ################################################################################
 
-ages_installer
+#ages_installer
 kpmcore
 xxkpmcore
 yaml-cpp
