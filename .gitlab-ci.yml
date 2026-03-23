@@ -2,25 +2,18 @@
 #  AcreetionOS ISO Build Pipeline
 #  Branch: acreetionos
 #  Builder: self-hosted shell runner on Dell Precision 7910
-# ═══════════════════════════════════════════════════════════════════
 #
-#  RUNNER REQUIREMENTS (register runner once on the build server):
+#  RUNNER SETUP (run once on the build server):
 #    gitlab-runner register \
 #      --url https://gitlab.acreetionos.org \
-#      --token <YOUR_TOKEN> \
+#      --token <YOUR_RUNNER_TOKEN> \
 #      --executor shell \
 #      --description "acreetionos-builder" \
 #      --tag-list "acreetionos-builder" \
 #      --run-untagged false
 #
-#  The shell runner must run as root (or a user with passwordless sudo
-#  for mkarchiso/pacman operations).  Edit /etc/gitlab-runner/config.toml:
-#    [[runners]]
-#      ...
-#      [runners.custom_build_dir]
-#      [runners.cache]
-#    Add: environment = ["PATH=/usr/local/sbin:/usr/local/bin:/usr/bin"]
-#
+#  The runner user needs passwordless sudo (or run as root).
+#  mkarchiso requires loop device access for squashfs builds.
 # ═══════════════════════════════════════════════════════════════════
 
 stages:
@@ -28,30 +21,23 @@ stages:
   - build
   - publish
 
-# ── Global variables ────────────────────────────────────────────────
 variables:
-  # Output goes inside the project dir so CI artifacts can collect it
   ISO_OUT_DIR:   "${CI_PROJECT_DIR}/out"
   WORK_DIR:      "${CI_PROJECT_DIR}/work"
   ISO_LABEL:     "AcreetionOS"
-  # Where the published ISO will land on the web server
-  # Adjust this path to wherever nginx/iso.acreetionos.org serves files
   PUBLISH_DIR:   "/srv/http/iso"
-  # Pacman package cache – reused across pipeline runs to save bandwidth
-  PKG_CACHE_DIR: "/var/cache/pacman/pkg"
 
-# ── Only run the pipeline on the 'acreetionos' branch, tags, or manual ──
 workflow:
   rules:
     - if: '$CI_COMMIT_BRANCH == "acreetionos"'
     - if: '$CI_COMMIT_TAG'
-    - if: '$CI_PIPELINE_SOURCE == "web"'     # manual "Run Pipeline"
-    - if: '$CI_PIPELINE_SOURCE == "schedule"' # nightly/scheduled builds
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
 
-# ═══════════════════════════════════════════════════════════════════
+# ───────────────────────────────────────────────────────────────────
 # STAGE 1 – PREPARE
-# Update keyring, ensure archiso and build deps are installed
-# ═══════════════════════════════════════════════════════════════════
+# Refresh keyring and ensure archiso + build deps are installed
+# ───────────────────────────────────────────────────────────────────
 prepare:deps:
   stage: prepare
   tags:
@@ -60,37 +46,24 @@ prepare:deps:
     - echo "==> Initialising pacman keyring..."
     - pacman-key --init
     - pacman-key --populate archlinux
-
     - echo "==> Refreshing databases and upgrading keyring..."
-    # SigLevel is Required DatabaseOptional per pacman.conf; keyring first
     - pacman -Sy --noconfirm --config "${CI_PROJECT_DIR}/pacman.conf" archlinux-keyring
-
     - echo "==> Installing archiso build dependencies..."
-    - pacman -S --noconfirm --needed --config "${CI_PROJECT_DIR}/pacman.conf" \
-        archiso          \
-        squashfs-tools   \
-        dosfstools       \
-        erofs-utils      \
-        mtools           \
-        xorriso          \
-        libarchive       \
-        grub             \
-        edk2-shell
-
+    - pacman -S --noconfirm --needed --config "${CI_PROJECT_DIR}/pacman.conf" archiso squashfs-tools dosfstools erofs-utils mtools xorriso libarchive grub edk2-shell
     - echo "==> Build environment ready."
     - mkarchiso --version
   rules:
     - when: always
 
-# ═══════════════════════════════════════════════════════════════════
+# ───────────────────────────────────────────────────────────────────
 # STAGE 2 – BUILD ISO
-# Runs mkarchiso using the project's own pacman.conf which defines:
-#   [acreetionOSREPO-main]  → iso.acreetionos.org:8448/repo-main/$arch
-#   [personal]              → iso.acreetionos.org:8448/personal
-#   [temp-repo]             → iso.acreetionos.org:8448/temp_repo/
-#   IgnorePkg = v4l2loopback-dkms  (intentionally excluded from upgrades)
+# pacman.conf defines:
+#   [acreetionOSREPO-main]  iso.acreetionos.org:8448/repo-main/$arch
+#   [personal]              iso.acreetionos.org:8448/personal
+#   [temp-repo]             iso.acreetionos.org:8448/temp_repo/
+#   IgnorePkg = v4l2loopback-dkms
 #   ParallelDownloads = 25
-# ═══════════════════════════════════════════════════════════════════
+# ───────────────────────────────────────────────────────────────────
 build:iso:
   stage: build
   tags:
@@ -102,43 +75,19 @@ build:iso:
     - echo "==> Cleaning previous build artifacts..."
     - rm -rf "${WORK_DIR}" "${ISO_OUT_DIR}"
     - mkdir -p "${ISO_OUT_DIR}"
-    # Ensure pacman cache dir exists for reuse
-    - mkdir -p "${PKG_CACHE_DIR}"
   script:
     - echo "==> Starting AcreetionOS ISO build..."
-    - echo "    Commit : ${CI_COMMIT_SHORT_SHA}"
-    - echo "    Branch : ${CI_COMMIT_BRANCH:-tag:$CI_COMMIT_TAG}"
-    - echo "    Runner : ${CI_RUNNER_DESCRIPTION}"
-    - echo ""
-
-    # mkarchiso must be run from the profile directory (project root)
+    - echo "    Commit  ${CI_COMMIT_SHORT_SHA}  Branch  ${CI_COMMIT_BRANCH:-tag:$CI_COMMIT_TAG}  Runner  ${CI_RUNNER_DESCRIPTION}"
     - cd "${CI_PROJECT_DIR}"
-
-    # Core build command – mirrors what mkarchiso.sh does:
-    #   mkarchiso -L AcreetionOS -v -o ../ISO . -C ./pacman.conf
-    # but output redirected inside project for artifact collection
-    - |
-      mkarchiso \
-        -L "${ISO_LABEL}" \
-        -v \
-        -w "${WORK_DIR}" \
-        -o "${ISO_OUT_DIR}" \
-        -C "${CI_PROJECT_DIR}/pacman.conf" \
-        "${CI_PROJECT_DIR}"
-
-    - echo "==> Build complete. ISO output:"
+    - mkarchiso -L "${ISO_LABEL}" -v -w "${WORK_DIR}" -o "${ISO_OUT_DIR}" -C "${CI_PROJECT_DIR}/pacman.conf" "${CI_PROJECT_DIR}"
+    - echo "==> Build complete."
     - ls -lh "${ISO_OUT_DIR}"/*.iso
-
-    # Generate checksums alongside the ISO
     - cd "${ISO_OUT_DIR}"
     - sha256sum *.iso > SHA256SUMS
-    - md5sum  *.iso > MD5SUMS
+    - md5sum *.iso > MD5SUMS
     - cat SHA256SUMS
-
   after_script:
-    # Clean the large work directory to free disk space after every run
     - rm -rf "${WORK_DIR}"
-
   artifacts:
     name: "AcreetionOS-${CI_COMMIT_SHORT_SHA}"
     paths:
@@ -147,18 +96,11 @@ build:iso:
       - out/MD5SUMS
     expire_in: 30 days
 
-  cache:
-    key: "pacman-pkgcache"
-    paths:
-      - /var/cache/pacman/pkg/
-    policy: pull-push
-
-# ═══════════════════════════════════════════════════════════════════
+# ───────────────────────────────────────────────────────────────────
 # STAGE 3 – PUBLISH
-# Copy the ISO to the nginx-served directory and update the
-# "latest" symlink so iso.acreetionos.org always points to newest.
-# Only runs on the acreetionos branch or a version tag.
-# ═══════════════════════════════════════════════════════════════════
+# Copies ISO to the nginx-served directory, updates latest symlink,
+# keeps the 3 most recent builds and prunes the rest.
+# ───────────────────────────────────────────────────────────────────
 publish:iso:
   stage: publish
   tags:
@@ -169,41 +111,20 @@ publish:iso:
     - ISO_FILE=$(ls "${ISO_OUT_DIR}"/*.iso | head -n1)
     - ISO_NAME=$(basename "${ISO_FILE}")
     - DATED_NAME="AcreetionOS-$(date +%Y%m%d)-${CI_COMMIT_SHORT_SHA}.iso"
-
-    - echo "==> Publishing ${ISO_NAME} → ${PUBLISH_DIR}/${DATED_NAME}"
-
+    - echo "==> Publishing ${ISO_NAME} as ${DATED_NAME}"
     - mkdir -p "${PUBLISH_DIR}"
-
-    # Copy ISO with a date-stamped name, keep last 3 builds
-    - cp "${ISO_FILE}"                        "${PUBLISH_DIR}/${DATED_NAME}"
-    - cp "${ISO_OUT_DIR}/SHA256SUMS"          "${PUBLISH_DIR}/SHA256SUMS"
-    - cp "${ISO_OUT_DIR}/MD5SUMS"             "${PUBLISH_DIR}/MD5SUMS"
-
-    # Update "latest" symlink
-    - ln -sf "${PUBLISH_DIR}/${DATED_NAME}"   "${PUBLISH_DIR}/AcreetionOS-latest.iso"
-
-    # Prune ISOs older than the 3 most recent
-    - |
-      ls -t "${PUBLISH_DIR}"/AcreetionOS-2*.iso 2>/dev/null \
-        | tail -n +4 \
-        | xargs -r rm -v
-
-    - echo "==> Published: ${DATED_NAME}"
-    - echo "==> Symlink  : AcreetionOS-latest.iso → ${DATED_NAME}"
+    - cp "${ISO_FILE}" "${PUBLISH_DIR}/${DATED_NAME}"
+    - cp "${ISO_OUT_DIR}/SHA256SUMS" "${PUBLISH_DIR}/SHA256SUMS"
+    - cp "${ISO_OUT_DIR}/MD5SUMS" "${PUBLISH_DIR}/MD5SUMS"
+    - ln -sf "${PUBLISH_DIR}/${DATED_NAME}" "${PUBLISH_DIR}/AcreetionOS-latest.iso"
+    - ls -t "${PUBLISH_DIR}"/AcreetionOS-2*.iso 2>/dev/null | tail -n +4 | xargs -r rm -v
+    - echo "==> Done. Symlink AcreetionOS-latest.iso -> ${DATED_NAME}"
     - ls -lh "${PUBLISH_DIR}"/AcreetionOS*.iso
-
   environment:
     name: iso-server
     url: https://iso.acreetionos.org
-
   rules:
     - if: '$CI_COMMIT_BRANCH == "acreetionos"'
       when: on_success
     - if: '$CI_COMMIT_TAG'
       when: on_success
-
-# ═══════════════════════════════════════════════════════════════════
-# OPTIONAL: Scheduled nightly build
-# Configure via GitLab → CI/CD → Schedules → set cron + branch
-# No extra job needed; the workflow rules above allow schedule runs.
-# ═══════════════════════════════════════════════════════════════════
