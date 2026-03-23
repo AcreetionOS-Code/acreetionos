@@ -9,7 +9,7 @@
 #      --token <YOUR_RUNNER_TOKEN> \
 #      --executor shell \
 #      --description "acreetionos-builder" \
-#      --tag-list "acreetionos-builder" \
+#      --tag-list "acreetionos" \
 #      --run-untagged false
 #
 #  The runner user needs passwordless sudo (or run as root).
@@ -67,7 +67,7 @@ prepare:deps:
 build:iso:
   stage: build
   tags:
-    - acreetionos-builder
+    - acreetionos
   needs:
     - prepare:deps
   timeout: 3h
@@ -104,7 +104,7 @@ build:iso:
 publish:iso:
   stage: publish
   tags:
-    - acreetionos-builder
+    - acreetionos
   needs:
     - build:iso
   script:
