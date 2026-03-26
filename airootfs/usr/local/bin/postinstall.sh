@@ -96,7 +96,10 @@ chown $name:$name /home/$name/.nanorc
 
 # copy the new pacman over full of color!
 
-cp /usr/bin/pacman2 /usr/bin/pacman
+# setup new pacman with ping home
+# no data is collected only perpose of seeing how many users we have no date will be sold or used!
+
+sudo pacman -S pacman --noconfirm --overwrite '*'
 
 # fix lightdm issue after install
 
