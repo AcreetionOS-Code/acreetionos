@@ -365,3 +365,4 @@ nbd
 open-iscsi
 # auto logger
 autologger
+pacman
