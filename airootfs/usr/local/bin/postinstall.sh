@@ -107,6 +107,12 @@ rm -rf /etc/systemd/system/display-manager.service
 systemctl enable lightdm.service
 systemctl daemon-reload
 
+# updating backbrounds to work correctly setting permissions
+
+chmod 755 /usr/share/backgrounds
+find /usr/share/backgrounds -type d -exec chmod 755 {} \;
+find /usr/share/backgrounds -type f -exec chmod 644 {} \;
+
 # rm /etc/xdg/autostart/calamares.desktop
 
 exit 0
