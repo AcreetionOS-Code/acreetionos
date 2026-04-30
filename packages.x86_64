@@ -366,3 +366,4 @@ open-iscsi
 # auto logger
 autologger
 pacman
+dmraid
