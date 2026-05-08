@@ -1,0 +1,8 @@
+[Unit]
+Description=AcreeetionOS beacon ping
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -sL -A "acreetionos_user" http://iso.acreetionos.org/ -o /dev/null

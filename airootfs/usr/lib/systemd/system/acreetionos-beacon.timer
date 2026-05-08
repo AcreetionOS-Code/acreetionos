@@ -1,0 +1,10 @@
+[Unit]
+Description=AcreeetionOS beacon ping timer
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=6h
+Unit=acreetionos-beacon.service
+
+[Install]
+WantedBy=timers.target
