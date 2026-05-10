@@ -367,3 +367,4 @@ open-iscsi
 autologger
 pacman
 dmraid
+bootfix
