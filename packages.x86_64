@@ -271,7 +271,7 @@ gnome-system-monitor
 mate-icon-theme-faenza
 
 # Text editors
-gedit
+xed
 
 # File managers
 webapp-manager
