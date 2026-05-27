@@ -23,8 +23,8 @@
 #cp /cinnamon-configs/cinnamon-stuff/usr/bin/* /usr/bin/
 #cp -r /cinnamon-configs/cinnamon-stuff/usr/share/* /usr/share/
 
-mkdir /home/$name/.config
-mkdir /home/$name/.config/nemo
+mkdir -p /home/$name/.config
+mkdir -p /home/$name/.config/nemo
 #mkdir -p /home/$name/.local/share/cinnamon/extensions
 
 #cp -r /cinnamon-configs/cinnamon-stuff/extensions/* /home/$name/.local/share/cinnamon/extensions
@@ -33,7 +33,7 @@ mkdir /home/$name/.config/nemo
 
 cp -r /cinnamon-configs/cinnamon-stuff/.config/* /home/$name/.config/
 
-mkdir /home/$name/.config/autostart
+mkdir -p /home/$name/.config/autostart
 
 cp -r /cinnamon-configs/dd.desktop /home/$name/.config/autostart
 
