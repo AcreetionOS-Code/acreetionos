@@ -1,0 +1,11 @@
+# VARIANT PACKAGES OVERRIDE
+# packages listed here are APPENDED to the base packages.x86_64
+# to remove a package from base, prefix with a minus sign: -packagename
+# one package per line, comments start with #
+
+# example additions (uncomment to use):
+# firefox-developer-edition
+# neovim
+# alacritty
+# btop
+# kitty
