@@ -1,0 +1,86 @@
+name: bidirectional-mirror
+
+on:
+  push:
+    branches: ['**']
+    tags: ['**']
+  delete:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: bidirectional-mirror-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    if: github.event_name != 'delete' || github.event.ref_type == 'branch' || github.event.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install counterpart deploy key
+        env:
+          MIRROR_KEY: ${{ secrets.MIRROR_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$MIRROR_KEY" > ~/.ssh/mirror_key
+          chmod 600 ~/.ssh/mirror_key
+
+      - name: Push mirrored refs (fast-forward only, no force)
+        env:
+          COUNTERPART: ${{ vars.COUNTERPART_REPO }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          DEL_TYPE: ${{ github.event.ref_type }}
+          DEL_REF: ${{ github.event.ref }}
+        run: |
+          set -euo pipefail
+          git config core.sshCommand "ssh -i ~/.ssh/mirror_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          git config user.name 'mirror-bot'
+          git config user.email 'mirror-bot@users.noreply.github.com'
+          git remote add counterpart "git@github.com:${COUNTERPART}.git"
+
+          if [ "$EVENT" = "push" ] && git log -1 --pretty=%B | grep -q '\[skip mirror\]'; then
+            echo "Commit marked [skip mirror] - stopping."
+            exit 0
+          fi
+
+          case "$EVENT" in
+            delete)
+              case "$DEL_TYPE" in
+                branch) NS=heads ;;
+                *)      NS=tags  ;;
+              esac
+              echo "Propagating deletion of ${DEL_TYPE} ${DEL_REF}"
+              git push counterpart ":refs/${NS}/${DEL_REF}"
+              ;;
+            schedule|workflow_dispatch)
+              echo "Reconciliation sweep of all heads and tags"
+              git push counterpart 'refs/heads/*:refs/heads/*' 'refs/tags/*:refs/tags/*'
+              ;;
+            *)
+              case "$REF_TYPE" in
+                branch) NS=heads ;;
+                *)      NS=tags  ;;
+              esac
+              echo "Mirroring ${REF_TYPE} ${REF_NAME} -> refs/${NS}/${REF_NAME} on ${COUNTERPART} (fast-forward only)"
+              git push counterpart "${REF}:refs/${NS}/${REF_NAME}"
+              ;;
+          esac
+
+      - name: Summarize divergence on failure
+        if: failure()
+        run: |
+          echo "### Mirror push failed" >> "$GITHUB_STEP_SUMMARY"
+          echo "The counterpart repository has diverged (non-fast-forward)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Resolve manually, then re-run this workflow via workflow_dispatch." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
